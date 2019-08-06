@@ -34,11 +34,11 @@ public class Lesson4Application {
 
 	// Start RMQ on local machine using
 	// docker run -d --name rabbitmq -p 15672:15672 -p 5672:5672 rabbitmq:3.7-management
-	// Create queues, lines and word-count
+	// Create queues: lines and word-count
 
 	static final String LINES_QUEUE = "lines";
 	static final String WORDS_COUNT_QUEUE = "word-count";
-	public static final String ALPHANUMERIC = "^[a-zA-Z0-9]+$";
+	public static final String ALPHA_NUMERIC = "^[a-zA-Z0-9]+$";
 
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Lesson4Application.class);
@@ -55,8 +55,6 @@ public class Lesson4Application {
 				.doOnNext(c -> System.out.printf("Connection established: %s", c))
 				.cache();
 	}
-
-
 
 	@EventListener
 	public void applicationStarted(ApplicationStartedEvent event) {
@@ -80,11 +78,12 @@ public class Lesson4Application {
 	}
 
 	private Function<Flux<Delivery>, Flux<Tuple2<String, LongAdder>>> wordCount() {
-		return f -> f.flatMap(l -> Flux.fromArray(new String(l.getBody()).split("\\b")))
-				.filter(w -> w.matches(ALPHANUMERIC))
+		return f // this is Flux<Delivery>
+				-> f.flatMap(l -> Flux.fromArray(new String(l.getBody()).split("\\b")))
+				.filter(w -> w.matches(ALPHA_NUMERIC))
 				.map(String::toLowerCase)
 				.groupBy(words -> words)
-				.flatMap(emitWordCount());
+				.flatMap(emitWordCount()); // This produces Flux<Tuple2<String, LongAdder>>
 	}
 
 	private Function<? super GroupedFlux<String, String>, Flux<Tuple2<String, LongAdder>>> emitWordCount() {
@@ -94,5 +93,4 @@ public class Lesson4Application {
 					return t;
 				});
 	}
-
 }
